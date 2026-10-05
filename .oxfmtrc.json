@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 80,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "useTabs": true,
+  "tabWidth": 2,
+  "sortPackageJson": false,
+  "sortImports": {
+    "newlinesBetween": true,
+    "groups": [["builtin", "external"], "path-alias", ["parent", "sibling", "index"], "unknown"]
+  },
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    ".agents",
+    ".next",
+    ".vercel",
+    ".wrangler",
+    ".opencode",
+    ".turbo",
+    "packages/db/drizzle",
+    "next-env.d.ts",
+    "pnpm-lock.yaml",
+    "skills-lock.json",
+    "routeTree.gen.ts",
+    "openapi.gen.ts",
+    "uniwind-types.d.ts"
+  ]
+}
