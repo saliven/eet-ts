@@ -3,6 +3,7 @@ import {
   EET_MAX_SOAP_BYTES,
   EET_PLAYGROUND_ENDPOINT,
   EET_SOAP_ACTION,
+  Environment,
 } from "./constants.ts";
 import { parseEetResponse } from "./response.ts";
 import { WsSecuritySigner } from "./signing.ts";
@@ -10,7 +11,7 @@ import { HttpsEetTransport } from "./transport.ts";
 import type {
   BuildSignedRequestOptions,
   EetClientOptions,
-  EetEnvironment,
+  EetEnvironmentInput,
   EetRequestOptions,
   EetSigner,
   EetSubmissionResult,
@@ -115,12 +116,12 @@ export class EetClient {
   }
 }
 
-export function resolveEndpoint(environment: EetEnvironment): string {
-  if (environment === "playground") {
+export function resolveEndpoint(environment: EetEnvironmentInput): string {
+  if (environment === Environment.Playground) {
     return EET_PLAYGROUND_ENDPOINT;
   }
 
-  if (environment === "production") {
+  if (environment === Environment.Production) {
     throw new Error(
       "The official EET production endpoint is not bundled yet. Pass { endpoint: 'https://...' } as environment.",
     );

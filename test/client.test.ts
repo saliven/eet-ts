@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { EetCashRegister } from "../src/cash-register.ts";
 import { EetCertificate } from "../src/certificate.ts";
 import { EetClient } from "../src/client.ts";
-import { EET_PLAYGROUND_ENDPOINT, EET_SOAP_ACTION } from "../src/constants.ts";
+import {
+  EET_PLAYGROUND_ENDPOINT,
+  EET_SOAP_ACTION,
+  Environment,
+  SubmissionStatus,
+} from "../src/constants.ts";
 import { EetProtocolError } from "../src/index.ts";
 import type { EetTaxpayer } from "../src/taxpayer.ts";
 import type { EetSigner, EetTransport } from "../src/types.ts";
@@ -50,10 +55,10 @@ describe("EetClient", () => {
       }),
     };
 
-    const client = new EetClient({ environment: "playground", taxpayer, signer, transport, ...clocks });
+    const client = new EetClient({ environment: Environment.Playground, taxpayer, signer, transport, ...clocks });
 
     await expect(client.registerSale(sale)).resolves.toMatchObject({
-      status: "accepted",
+      status: SubmissionStatus.Accepted,
       pok: "987a6be5-6af5-44f3-b4fc-987654321000-ff",
       globalTransactionId: "trace-client",
     });
@@ -75,9 +80,9 @@ describe("EetClient", () => {
       }),
     };
 
-    const client = new EetClient({ environment: "playground", taxpayer, signer, transport, ...clocks });
+    const client = new EetClient({ environment: Environment.Playground, taxpayer, signer, transport, ...clocks });
 
-    await expect(client.verifySale(sale)).resolves.toMatchObject({ status: "verification-ok", code: 0 });
+    await expect(client.verifySale(sale)).resolves.toMatchObject({ status: SubmissionStatus.VerificationOk, code: 0 });
   });
 
   it("lets a request taxpayer override the client default", async () => {
@@ -102,9 +107,9 @@ describe("EetClient", () => {
       }),
     };
 
-    const client = new EetClient({ environment: "playground", taxpayer, signer, transport, ...clocks });
+    const client = new EetClient({ environment: Environment.Playground, taxpayer, signer, transport, ...clocks });
 
-    await expect(client.registerSale(sale, { taxpayer: override })).resolves.toMatchObject({ status: "accepted" });
+    await expect(client.registerSale(sale, { taxpayer: override })).resolves.toMatchObject({ status: SubmissionStatus.Accepted });
   });
 
   it("requires a taxpayer on the client or the request", async () => {
@@ -118,10 +123,10 @@ describe("EetClient", () => {
         body: `<tns:Odpoved xmlns:tns="http://fs.gov.cz/eet/schema/v4"><tns:Hlavicka uuid_zpravy="e23e5a5a-08d7-4a08-844d-2b6c6b60621d" dat_prij="2027-03-04T18:25:21+01:00" /><tns:Potvrzeni pok="987a6be5-6af5-44f3-b4fc-987654321000-ff" test="true" /></tns:Odpoved>`,
       })),
     };
-    const client = new EetClient({ environment: "playground", signer, transport, ...clocks });
+    const client = new EetClient({ environment: Environment.Playground, signer, transport, ...clocks });
 
     await expect(client.registerSale(sale)).rejects.toThrow("taxpayer");
-    await expect(client.registerSale(sale, { taxpayer })).resolves.toMatchObject({ status: "accepted" });
+    await expect(client.registerSale(sale, { taxpayer })).resolves.toMatchObject({ status: SubmissionStatus.Accepted });
   });
 
   it("uses structured protocol errors for transport responses", async () => {
@@ -133,7 +138,7 @@ describe("EetClient", () => {
         body: "temporarily unavailable",
       }),
     };
-    const client = new EetClient({ environment: "playground", taxpayer, signer, transport, ...clocks });
+    const client = new EetClient({ environment: Environment.Playground, taxpayer, signer, transport, ...clocks });
 
     await expect(client.registerSale(sale)).rejects.toMatchObject({
       name: "EetProtocolError",
@@ -146,14 +151,14 @@ describe("EetClient", () => {
   });
 
   it("uses structured protocol errors for manual parsing", () => {
-    const client = new EetClient({ environment: "playground", taxpayer });
+    const client = new EetClient({ environment: Environment.Playground, taxpayer });
 
     expect(() => client.parseResponse("<broken>"))
       .toThrow(EetProtocolError);
   });
 
   it("keeps manual bare-response parsing", () => {
-    const client = new EetClient({ environment: "playground", taxpayer });
+    const client = new EetClient({ environment: Environment.Playground, taxpayer });
     const result = client.parseResponse(
       `<tns:Odpoved xmlns:tns="http://fs.gov.cz/eet/schema/v4">` +
       `<tns:Hlavicka uuid_zpravy="e23e5a5a-08d7-4a08-844d-2b6c6b60621d" dat_prij="2027-03-04T18:25:21+01:00"/>` +
@@ -161,6 +166,6 @@ describe("EetClient", () => {
       `</tns:Odpoved>`,
     );
 
-    expect(result).toMatchObject({ status: "accepted" });
+    expect(result).toMatchObject({ status: SubmissionStatus.Accepted });
   });
 });

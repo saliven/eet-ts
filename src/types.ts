@@ -1,15 +1,20 @@
 import type { AmountInput } from "./amount.ts";
 import type { EetCashRegister } from "./cash-register.ts";
 import type { EetCertificate } from "./certificate.ts";
+import type { Environment, SubmissionStatus } from "./constants.ts";
 import type { EetTaxpayer } from "./taxpayer.ts";
 
-export type EetEnvironment =
-  | "playground"
-  | "production"
-  | { endpoint: string; test?: boolean };
+export type InferObjectValues<T> = T[keyof T];
+
+export interface EetCustomEnvironment {
+  endpoint: string;
+  test?: boolean;
+}
+
+export type EetEnvironmentInput = Environment | EetCustomEnvironment;
 
 export interface EetClientOptions {
-  environment: EetEnvironment;
+  environment: EetEnvironmentInput;
   taxpayer?: EetTaxpayer;
   timeoutMs?: number;
   transport?: EetTransport;
@@ -97,7 +102,7 @@ export interface EetWarning {
 
 export type EetSubmissionResult =
   | {
-      status: "accepted";
+      status: typeof SubmissionStatus.Accepted;
       uuid: string;
       pok: string;
       receivedAt: string;
@@ -107,7 +112,7 @@ export type EetSubmissionResult =
       rawXml: string;
     }
   | {
-      status: "verification-ok";
+      status: typeof SubmissionStatus.VerificationOk;
       uuid?: string;
       code: 0;
       message: string;
@@ -118,7 +123,7 @@ export type EetSubmissionResult =
       rawXml: string;
     }
   | {
-      status: "rejected";
+      status: typeof SubmissionStatus.Rejected;
       uuid?: string;
       code: number;
       message: string;

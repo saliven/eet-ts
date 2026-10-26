@@ -1,3 +1,6 @@
+// oxlint-disable no-redeclare
+import type { InferObjectValues } from "./types.ts";
+
 export const EET_SCHEMA_NAMESPACE = "http://fs.gov.cz/eet/schema/v4";
 export const EET_SCHEMA_VERSION = "4.1";
 export const EET_SOAP_ACTION = "http://fs.gov.cz/eet/OdeslaniTrzby";
@@ -28,13 +31,26 @@ export const RSA_SHA256_SIGNATURE_ALGORITHM =
 
 export const EET_REGEX = {
   amount: /^((0|-?[1-9]\d{0,7})\.\d\d|-0\.(0[1-9]|[1-9]\d))$/,
-  dateTime: /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:Z|[+\-]\d\d:\d\d)$/,
+  dateTime: /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:Z|[+-]\d\d:\d\d)$/,
   eic: /^CZ[0-9]{8,10}$/,
   idJednotky: /^[1-9][0-9]{0,8}$/,
   pok: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}-[0-9a-fA-F]{2}$/,
-  string20: /^[0-9a-zA-Z\.,:;/#\-_ ]{1,20}$/,
-  string25: /^[0-9a-zA-Z\.,:;/#\-_ ]{1,25}$/,
+  string20: /^[0-9a-zA-Z.,:;/#\-_ ]{1,20}$/,
+  string25: /^[0-9a-zA-Z.,:;/#\-_ ]{1,25}$/,
   uuid: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
 };
 
 export const ASCII_XML_VALUE_REGEX = /^[\u0009\u000a\u000d\u0020-\u007e]*$/;
+
+export const Environment = {
+  Playground: "playground",
+  Production: "production",
+} as const;
+export type Environment = InferObjectValues<typeof Environment>;
+
+export const SubmissionStatus = {
+  Accepted: "accepted",
+  VerificationOk: "verification-ok",
+  Rejected: "rejected",
+} as const;
+export type SubmissionStatus = InferObjectValues<typeof SubmissionStatus>;

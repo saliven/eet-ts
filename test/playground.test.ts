@@ -2,9 +2,10 @@ import { unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { EetCertificate } from "../src/certificate.ts";
 import { EetClient } from "../src/client.ts";
+import { Environment, SubmissionStatus } from "../src/constants.ts";
 
 const CERTIFICATE_ZIP_URL =
-  "https://eet.gov.cz/files/CAEET_Playground_2026_v1.zip";
+  "https://eet.gov.cz/assets/cs/cmsmedia/pro-vyvojare/CAEET_Playground_2026_v1.zip";
 const DEFAULT_EIC = "CZ00000019";
 
 describe("EET playground", () => {
@@ -13,7 +14,7 @@ describe("EET playground", () => {
     const result = await client.verifySale(playgroundSale());
 
     expect(result).toMatchObject({
-      status: "verification-ok",
+      status: SubmissionStatus.VerificationOk,
       code: 0,
       test: true,
     });
@@ -24,11 +25,11 @@ describe("EET playground", () => {
     const result = await client.registerSale(playgroundSale());
 
     expect(result).toMatchObject({
-      status: "accepted",
+      status: SubmissionStatus.Accepted,
       test: true,
     });
     expect(
-      result.status === "accepted" ? result.pok.endsWith("-ff") : false,
+      result.status === SubmissionStatus.Accepted ? result.pok.endsWith("-ff") : false,
     ).toBe(true);
   }, 30_000);
 });
@@ -40,7 +41,7 @@ const playgroundClient = async () => {
   };
 
   return new EetClient({
-    environment: "playground",
+    environment: Environment.Playground,
     taxpayer,
     timeoutMs: 30_000,
   });
@@ -55,9 +56,13 @@ const playgroundSale = () => ({
 });
 
 const playgroundCertificate = async (eic: string) => {
-  const files = unzipSync(
-    new Uint8Array(await (await fetch(CERTIFICATE_ZIP_URL)).arrayBuffer()),
-  );
+  const response = await fetch(CERTIFICATE_ZIP_URL);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download playground certificate bundle from ${CERTIFICATE_ZIP_URL}: HTTP ${response.status}`,
+    );
+  }
+  const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
   const p12 = files[`CA_EET-Playground-${eic}.p12`];
   const password = files["password_pokladni_cert_playground.txt"];
 

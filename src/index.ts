@@ -6,6 +6,8 @@ export {
   EET_SCHEMA_NAMESPACE,
   EET_SCHEMA_VERSION,
   EET_SOAP_ACTION,
+  Environment,
+  SubmissionStatus,
 } from "./constants.ts";
 export { eetDateTime } from "./datetime.ts";
 export {
@@ -33,7 +35,8 @@ export type { EetTaxpayer } from "./taxpayer.ts";
 export type {
   BuildSignedRequestOptions,
   EetClientOptions,
-  EetEnvironment,
+  EetCustomEnvironment,
+  EetEnvironmentInput,
   EetRequestOptions,
   EetSigner,
   EetSubmissionResult,
@@ -41,6 +44,7 @@ export type {
   EetTransportRequest,
   EetTransportResponse,
   EetWarning,
+  InferObjectValues,
   NormalizedSale,
   RegisterSaleInput,
   SignedEetRequest,

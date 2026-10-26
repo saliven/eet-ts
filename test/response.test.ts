@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SubmissionStatus } from "../src/constants.ts";
 import { EetProtocolError, parseEetResponse } from "../src/response.ts";
 
 const EET_NAMESPACE = "http://fs.gov.cz/eet/schema/v4";
@@ -35,7 +36,7 @@ describe("parseEetResponse", () => {
     });
 
     expect(result).toEqual({
-      status: "accepted",
+      status: SubmissionStatus.Accepted,
       uuid: UUID,
       pok: POK,
       receivedAt: RECEIVED_AT,
@@ -57,7 +58,7 @@ describe("parseEetResponse", () => {
       body: acceptedResponse(),
     });
 
-    expect(result).toMatchObject({ status: "accepted", pok: POK });
+    expect(result).toMatchObject({ status: SubmissionStatus.Accepted, pok: POK });
   });
 
   it("matches namespace URIs instead of prefixes and ignores unknown metadata", () => {
@@ -68,7 +69,7 @@ describe("parseEetResponse", () => {
       `</env:Envelope>`;
 
     expect(parseEetResponse({ statusCode: 200, headers: {}, body: xml }))
-      .toMatchObject({ status: "accepted", pok: POK });
+      .toMatchObject({ status: SubmissionStatus.Accepted, pok: POK });
   });
 
   it("trusts a valid POK over an inconsistent HTTP status", () => {
@@ -77,7 +78,7 @@ describe("parseEetResponse", () => {
       headers: {},
       body: acceptedEnvelope(),
     })).toMatchObject({
-      status: "accepted",
+      status: SubmissionStatus.Accepted,
       uuid: UUID,
       receivedAt: RECEIVED_AT,
       pok: POK,
@@ -85,10 +86,10 @@ describe("parseEetResponse", () => {
   });
 
   it.each([
-    { code: "0", status: "verification-ok", retryable: undefined },
-    { code: "2", status: "rejected", retryable: false },
-    { code: "-1", status: "rejected", retryable: true },
-    { code: "8", status: "rejected", retryable: true },
+    { code: "0", status: SubmissionStatus.VerificationOk, retryable: undefined },
+    { code: "2", status: SubmissionStatus.Rejected, retryable: false },
+    { code: "-1", status: SubmissionStatus.Rejected, retryable: true },
+    { code: "8", status: SubmissionStatus.Rejected, retryable: true },
   ])("maps EET error code $code to $status", ({ code, status, retryable }) => {
     const result = parseEetResponse({
       statusCode: 200,
@@ -97,7 +98,7 @@ describe("parseEetResponse", () => {
     });
 
     expect(result.status).toBe(status);
-    if (result.status === "rejected") {
+    if (result.status === SubmissionStatus.Rejected) {
       expect(result.retryable).toBe(retryable);
     }
   });
@@ -122,7 +123,7 @@ describe("parseEetResponse", () => {
 
   it("trusts a valid EET error outcome over an inconsistent HTTP status", () => {
     expect(parseEetResponse({ statusCode: 500, headers: {}, body: errorResponse("-1") }))
-      .toMatchObject({ status: "rejected", code: -1, retryable: true });
+      .toMatchObject({ status: SubmissionStatus.Rejected, code: -1, retryable: true });
   });
 
   it.each([

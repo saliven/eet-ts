@@ -9,6 +9,7 @@ import {
   EET_REGEX,
   EET_SCHEMA_NAMESPACE,
   SOAP_ENV_NAMESPACE,
+  SubmissionStatus,
 } from "./constants.ts";
 import { EET_WARNING_MESSAGES, isRetryableEetError } from "./errors.ts";
 import type {
@@ -259,7 +260,7 @@ function decodeOdpoved(
     );
 
     return {
-      status: "accepted",
+      status: SubmissionStatus.Accepted,
       uuid,
       pok,
       receivedAt,
@@ -313,9 +314,9 @@ function decodeChyba(
   };
 
   return code === 0
-    ? { status: "verification-ok", ...base, code, message }
+    ? { status: SubmissionStatus.VerificationOk, ...base, code, message }
     : {
-        status: "rejected",
+        status: SubmissionStatus.Rejected,
         ...base,
         code,
         message,
@@ -593,7 +594,7 @@ function matchValue(
 
 function validDateTime(value: string, path: string): string {
   const parts =
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(Z|([+\-])(\d{2}):(\d{2}))$/.exec(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(Z|([+-])(\d{2}):(\d{2}))$/.exec(
       value,
     );
 
