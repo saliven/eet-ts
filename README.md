@@ -1,5 +1,10 @@
 # eet-ts
 
+[![npm version](https://img.shields.io/npm/v/eet-ts)](https://www.npmjs.com/package/eet-ts)
+[![CI](https://github.com/saliven/eet-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/saliven/eet-ts/actions/workflows/ci.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-types%20included-3178C6?logo=typescript&logoColor=white)](https://www.npmjs.com/package/eet-ts)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
 TypeScript SDK for EET 2.0 (Czech electronic sales registration).
 
 It validates sales, builds and signs the SOAP request with WS-Security, sends it over HTTPS, and turns the response into a typed result. You bring the certificate and the sale; the SDK handles the protocol.

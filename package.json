@@ -1,10 +1,25 @@
 {
   "name": "eet-ts",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "TypeScript SDK for the EET 2.0 SOAP API",
-  "keywords": [],
-  "license": "ISC",
-  "author": "",
+  "keywords": [
+    "eet",
+    "eet2",
+    "eet-2.0",
+    "eet-sdk",
+    "eet-client",
+    "elektronicka-evidence-trzeb",
+    "electronic-sales-registration",
+    "fiscalization",
+    "czech",
+    "cz",
+    "financni-sprava",
+    "soap",
+    "ws-security",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Saliven <s4liven@pm.me>",
   "repository": {
     "type": "git",
     "url": "https://github.com/saliven/eet-ts"
