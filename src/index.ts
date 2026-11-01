@@ -15,8 +15,14 @@ export {
   EET_WARNING_MESSAGES,
   isRetryableEetError,
 } from "./errors.ts";
+export {
+  defaultEetCrypto,
+  ForgeEetCrypto,
+  randomUuid,
+  WebCryptoEetCrypto,
+} from "./crypto.ts";
 export { signSoapEnvelope, WsSecuritySigner } from "./signing.ts";
-export { HttpsEetTransport, sendSoapRequest } from "./transport.ts";
+export type { WsSecuritySignerOptions } from "./signing.ts";
 export { EetProtocolError, parseEetResponse } from "./response.ts";
 export type { EetProtocolErrorContext, EetSoapFault } from "./response.ts";
 export { EetTransportError, EetValidationError } from "./types.ts";
@@ -35,6 +41,7 @@ export type { EetTaxpayer } from "./taxpayer.ts";
 export type {
   BuildSignedRequestOptions,
   EetClientOptions,
+  EetCrypto,
   EetCustomEnvironment,
   EetEnvironmentInput,
   EetRequestOptions,

@@ -1,13 +1,13 @@
-import { randomUUID } from "node:crypto";
 import {
   EET_MAX_SOAP_BYTES,
   EET_PLAYGROUND_ENDPOINT,
   EET_SOAP_ACTION,
   Environment,
 } from "./constants.ts";
+import { utf8Bytes } from "./bytes.ts";
+import { randomUuid } from "./crypto.ts";
 import { parseEetResponse } from "./response.ts";
 import { WsSecuritySigner } from "./signing.ts";
-import { HttpsEetTransport } from "./transport.ts";
 import type {
   BuildSignedRequestOptions,
   EetClientOptions,
@@ -30,7 +30,7 @@ export class EetClient {
   constructor(options: EetClientOptions) {
     this.options = options;
     this.signer = options.signer ?? new WsSecuritySigner();
-    this.transport = options.transport ?? new HttpsEetTransport();
+    this.transport = options.transport;
   }
 
   registerSale(
@@ -63,7 +63,7 @@ export class EetClient {
       taxpayer,
       verification: options.verification ?? false,
       now: this.options.now ?? (() => new Date()),
-      uuid: this.options.uuid ?? randomUUID,
+      uuid: this.options.uuid ?? randomUuid,
     });
 
     const bodyId = `Body-${sale.uuid}`;
@@ -73,7 +73,7 @@ export class EetClient {
       unsignedEnvelope,
       taxpayer.certificate,
     );
-    const byteLength = Buffer.byteLength(signedEnvelope, "utf8");
+    const byteLength = utf8Bytes(signedEnvelope).byteLength;
 
     if (byteLength > EET_MAX_SOAP_BYTES) {
       throw new Error(
