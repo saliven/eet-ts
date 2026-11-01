@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { EetCertificate } from "../src/certificate.ts";
 import { EetClient } from "../src/client.ts";
 import { Environment, SubmissionStatus } from "../src/constants.ts";
+import { ForgeEetCrypto } from "../src/crypto.ts";
+import { HttpsEetTransport } from "../src/node.ts";
+import { WsSecuritySigner } from "../src/signing.ts";
 
 const CERTIFICATE_ZIP_URL =
   "https://eet.gov.cz/assets/cs/cmsmedia/pro-vyvojare/CAEET_Playground_2026_v1.zip";
@@ -32,9 +35,16 @@ describe("EET playground", () => {
       result.status === SubmissionStatus.Accepted ? result.pok.endsWith("-ff") : false,
     ).toBe(true);
   }, 30_000);
+
+  it("accepts a sale signed with pure JavaScript crypto (React Native path)", async () => {
+    const client = await playgroundClient(new WsSecuritySigner({ crypto: new ForgeEetCrypto() }));
+    const result = await client.verifySale(playgroundSale());
+
+    expect(result).toMatchObject({ status: SubmissionStatus.VerificationOk, code: 0 });
+  }, 30_000);
 });
 
-const playgroundClient = async () => {
+const playgroundClient = async (signer?: WsSecuritySigner) => {
   const taxpayer = {
     eic: "CZ00000019",
     certificate: new EetCertificate(await playgroundCertificate("CZ00000019")),
@@ -44,6 +54,8 @@ const playgroundClient = async () => {
     environment: Environment.Playground,
     taxpayer,
     timeoutMs: 30_000,
+    transport: new HttpsEetTransport(),
+    ...(signer === undefined ? {} : { signer }),
   });
 };
 

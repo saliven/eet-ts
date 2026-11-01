@@ -27,6 +27,10 @@ const clocks = {
   uuid: () => "e23e5a5a-08d7-4a08-844d-2b6c6b60621d",
 };
 
+const unusedTransport: EetTransport = {
+  send: () => Promise.reject(new Error("transport not expected")),
+};
+
 const sale = {
   cashRegister,
   receiptNumber: "0/2482/IE25",
@@ -151,14 +155,14 @@ describe("EetClient", () => {
   });
 
   it("uses structured protocol errors for manual parsing", () => {
-    const client = new EetClient({ environment: Environment.Playground, taxpayer });
+    const client = new EetClient({ environment: Environment.Playground, taxpayer, transport: unusedTransport });
 
     expect(() => client.parseResponse("<broken>"))
       .toThrow(EetProtocolError);
   });
 
   it("keeps manual bare-response parsing", () => {
-    const client = new EetClient({ environment: Environment.Playground, taxpayer });
+    const client = new EetClient({ environment: Environment.Playground, taxpayer, transport: unusedTransport });
     const result = client.parseResponse(
       `<tns:Odpoved xmlns:tns="http://fs.gov.cz/eet/schema/v4">` +
       `<tns:Hlavicka uuid_zpravy="e23e5a5a-08d7-4a08-844d-2b6c6b60621d" dat_prij="2027-03-04T18:25:21+01:00"/>` +
