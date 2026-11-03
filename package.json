@@ -1,6 +1,6 @@
 {
   "name": "eet-ts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript SDK for the EET 2.0 SOAP API",
   "keywords": [
     "eet",
