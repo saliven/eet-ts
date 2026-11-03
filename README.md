@@ -7,14 +7,16 @@
 
 TypeScript SDK for EET 2.0 (Czech electronic sales registration).
 
-It validates sales, builds and signs the SOAP request with WS-Security, sends it over HTTPS, and turns the response into a typed result. You bring the certificate and the sale; the SDK handles the protocol.
+It validates sales, builds and signs the SOAP request with WS-Security, sends it over HTTPS, and turns the response into a typed result. The core has no Node-only APIs, so it also runs on Bun, Deno, and React Native (Expo) with a transport you provide. You bring the certificate and the sale; the SDK handles the protocol.
 
 - Typed results: accepted with a POK, verification OK, or rejected with an EET code
 - Validation of every field before anything is sent
 - P12 or PEM certificates
 - Multiple taxpayers and cash registers from one client
 - Built-in playground endpoint
-- Pluggable transport and signer
+- HTTPS transport for Node included; plug in your own anywhere else
+- Web Crypto or pure JavaScript signing
+- Pluggable transport, signer, and crypto
 
 ## Install
 
@@ -29,6 +31,7 @@ This example uses the official playground certificate for `CZ00000019`. You can 
 ```ts
 import { readFile } from "node:fs/promises";
 import { EetCertificate, EetClient, Environment, SubmissionStatus } from "eet-ts";
+import { HttpsEetTransport } from "eet-ts/node";
 
 const certificate = new EetCertificate({
   p12: await readFile("./CA_EET-Playground-CZ00000019.p12"),
@@ -50,6 +53,7 @@ const cashRegister = {
 const eet = new EetClient({
   environment: Environment.Playground,
   taxpayer,
+  transport: new HttpsEetTransport(),
 });
 
 const result = await eet.registerSale({
@@ -184,12 +188,12 @@ await eet.registerSale({ ...sale, firstSubmission: false });
 Set a request timeout on the client:
 
 ```ts
-new EetClient({ environment: Environment.Playground, taxpayer, timeoutMs: 2_000 });
+new EetClient({ environment: Environment.Playground, taxpayer, transport, timeoutMs: 2_000 });
 ```
 
 ## Certificates
 
-`EetCertificate` accepts P12 or PEM material. Parsing happens once in the constructor, so create certificates at startup and reuse them. One certificate can be shared by several taxpayers.
+`EetCertificate` accepts P12 or PEM material as a `Uint8Array` (a Node `Buffer` works too); PEM can also be a string. Parsing happens once in the constructor, so create certificates at startup and reuse them. One certificate can be shared by several taxpayers.
 
 ```ts
 const certificate = new EetCertificate({
@@ -212,7 +216,7 @@ A taxpayer (`EetTaxpayer`) is a plain object holding an EIC and the certificate 
 A cash register (`EetCashRegister`) is a plain object too. One taxpayer can run many registers, so every sale names its register.
 
 ```ts
-const eet = new EetClient({ environment: Environment.Playground, taxpayer });
+const eet = new EetClient({ environment: Environment.Playground, taxpayer, transport });
 
 const registerA = { id: "REGISTER-A", unitId: "303" };
 const registerB = { id: "REGISTER-B", unitId: "304" };
@@ -229,7 +233,7 @@ The client does not require a default taxpayer. Without one, pass `{ taxpayer }`
 The playground endpoint is built in:
 
 ```ts
-new EetClient({ environment: Environment.Playground, taxpayer });
+new EetClient({ environment: Environment.Playground, taxpayer, transport });
 // https://pg.trzbyeet.gov.cz/eet/services/EETServiceSOAP/v4
 ```
 
@@ -239,8 +243,72 @@ The production endpoint is not bundled until the official URL is confirmed. Pass
 new EetClient({
   environment: { endpoint: "https://..." },
   taxpayer,
+  transport,
 });
 ```
+
+## Transport
+
+The client sends requests through an `EetTransport`. Pass one to every `EetClient`.
+
+### Node
+
+`eet-ts/node` provides `HttpsEetTransport`, built on `node:https`. By default it reuses TLS connections through a keep-alive agent shared by all clients in the process. That matters because the HTTPS round trip is the main cost: per-sale CPU work (validation, XML, signing) is about 0.6 ms on typical hardware.
+
+Pass your own agent to tune pooling:
+
+```ts
+import { Agent } from "node:https";
+import { HttpsEetTransport } from "eet-ts/node";
+
+const transport = new HttpsEetTransport(new Agent({ keepAlive: true, maxSockets: 32 }));
+```
+
+### Your Own Transport
+
+Anywhere else (React Native, Bun, Deno, a proxy, tests), implement `EetTransport`. It has one method, `send(request)`:
+
+- `request.endpoint`, `request.soapAction`, and `request.xml`: POST `xml` to `endpoint` with `Content-Type: text/xml; charset=utf-8` and `SOAPAction: "<soapAction>"`.
+- `request.timeoutMs`: the client's `timeoutMs`, if set.
+- Resolve with `{ statusCode, body, headers }` for every HTTP response, including non-2xx ones. The SDK decides what the response means.
+- Reject with `EetTransportError` when no response arrived (network failure, timeout).
+
+A `fetch` based transport:
+
+```ts
+import { EetTransportError, type EetTransport } from "eet-ts";
+
+export const fetchTransport: EetTransport = {
+  async send({ endpoint, soapAction, xml, timeoutMs }) {
+    const controller = new AbortController();
+    const timer = timeoutMs === undefined ? undefined : setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/xml; charset=utf-8",
+          SOAPAction: `"${soapAction}"`,
+        },
+        body: xml,
+        signal: controller.signal,
+      });
+      const headers: Record<string, string> = {};
+      response.headers.forEach((value, name) => {
+        headers[name] = value;
+      });
+
+      return { statusCode: response.status, body: await response.text(), headers };
+    } catch (error) {
+      throw new EetTransportError("EET request failed", error);
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+};
+```
+
+You can also implement `EetSigner` (`sign(envelope, certificate)`) to replace signing entirely.
 
 ## Advanced Usage
 
@@ -268,21 +336,48 @@ const result = eet.parseResponse(responseXml, {
 });
 ```
 
-### Custom Transport
+### Signing Crypto
 
-The default transport reuses TLS connections through a keep-alive agent shared by all clients in the process. That matters because the HTTPS round trip is the main cost: per-sale CPU work (validation, XML, signing) is about 0.6 ms on typical hardware.
+`WsSecuritySigner` builds the WS-Security signature itself and delegates SHA-256 and RSA-SHA256 to an `EetCrypto`:
 
-Pass your own agent to tune pooling:
+| Implementation       | Uses                         | Default when                       |
+| -------------------- | ---------------------------- | ---------------------------------- |
+| `WebCryptoEetCrypto` | `crypto.subtle`              | `crypto.subtle` exists             |
+| `ForgeEetCrypto`     | node-forge, pure JavaScript  | otherwise (e.g. Hermes)            |
+
+Both produce identical signatures. Pick one explicitly, or implement `EetCrypto` (`sha256(data)`, `signRsaSha256(data, certificate)`) to sign with native code:
 
 ```ts
-import { Agent } from "node:https";
-import { HttpsEetTransport } from "eet-ts";
+import { ForgeEetCrypto, WsSecuritySigner } from "eet-ts";
 
-const transport = new HttpsEetTransport(new Agent({ keepAlive: true, maxSockets: 32 }));
-const eet = new EetClient({ environment: Environment.Playground, taxpayer, transport });
+const signer = new WsSecuritySigner({ crypto: new ForgeEetCrypto() });
+const eet = new EetClient({ environment: Environment.Playground, taxpayer, transport, signer });
 ```
 
-You can also implement `EetTransport` (`send(request)`) or `EetSigner` (`sign(envelope, certificate)`) to replace the HTTP layer or signing entirely, for example in tests.
+### React Native and Expo
+
+The `eet-ts` entry point has no Node dependencies; only `eet-ts/node` does, so don't import it in the app. Provide your own transport, such as the `fetch` example in [Your Own Transport](#your-own-transport). The SDK needs React Native 0.74+ (Expo SDK 51+) for `TextEncoder`.
+
+Message UUIDs come from `crypto.randomUUID` or `crypto.getRandomValues`. Hermes has neither, so either install a polyfill such as `react-native-get-random-values` (imported before `eet-ts`), or pass a generator:
+
+```ts
+import * as Crypto from "expo-crypto";
+import { File } from "expo-file-system";
+
+const certificate = new EetCertificate({
+  p12: await new File(certificateUri).bytes(),
+  passphrase,
+});
+
+const eet = new EetClient({
+  environment: Environment.Playground,
+  taxpayer: { eic: "CZ00000019", certificate },
+  transport: fetchTransport,
+  uuid: Crypto.randomUUID,
+});
+```
+
+Without `crypto.subtle`, signing falls back to `ForgeEetCrypto`. If you install `react-native-quick-crypto`, its `crypto.subtle` is picked up automatically and signing runs natively.
 
 ## Protocol Coverage
 

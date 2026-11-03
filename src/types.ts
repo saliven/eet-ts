@@ -17,7 +17,7 @@ export interface EetClientOptions {
   environment: EetEnvironmentInput;
   taxpayer?: EetTaxpayer;
   timeoutMs?: number;
-  transport?: EetTransport;
+  transport: EetTransport;
   signer?: EetSigner;
   now?: () => Date;
   uuid?: () => string;
@@ -85,6 +85,14 @@ export interface EetTransportResponse {
 
 export interface EetTransport {
   send(request: EetTransportRequest): Promise<EetTransportResponse>;
+}
+
+export interface EetCrypto {
+  sha256(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> | Uint8Array;
+  signRsaSha256(
+    data: Uint8Array<ArrayBuffer>,
+    certificate: EetCertificate,
+  ): Promise<Uint8Array> | Uint8Array;
 }
 
 export interface EetSigner {

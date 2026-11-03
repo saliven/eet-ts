@@ -1,13 +1,13 @@
-import { createPrivateKey, type KeyObject } from "node:crypto";
 import forge from "node-forge";
+import { bytesToBinary } from "./bytes.ts";
 
 export type EetCertificateInput =
   | {
-      privateKeyPem: string | Buffer;
-      certificatePem: string | Buffer;
+      privateKeyPem: string | Uint8Array;
+      certificatePem: string | Uint8Array;
     }
   | {
-      p12: Buffer;
+      p12: Uint8Array;
       passphrase?: string;
     };
 
@@ -19,15 +19,9 @@ export interface CertificateMaterial {
 
 export class EetCertificate {
   readonly material: CertificateMaterial;
-  private keyObject?: KeyObject;
 
   constructor(input: EetCertificateInput) {
     this.material = loadCertificate(input);
-  }
-
-  get privateKey(): KeyObject {
-    this.keyObject ??= createPrivateKey(this.material.privateKeyPem);
-    return this.keyObject;
   }
 }
 
@@ -35,8 +29,8 @@ export function loadCertificate(
   input: EetCertificateInput,
 ): CertificateMaterial {
   if ("privateKeyPem" in input) {
-    const privateKeyPem = input.privateKeyPem.toString("utf-8");
-    const certificatePem = input.certificatePem.toString("utf-8");
+    const privateKeyPem = pemText(input.privateKeyPem);
+    const certificatePem = pemText(input.certificatePem);
 
     return {
       privateKeyPem,
@@ -48,11 +42,15 @@ export function loadCertificate(
   return loadP12CertificateMaterial(input.p12, input.passphrase ?? "");
 }
 
+function pemText(pem: string | Uint8Array): string {
+  return typeof pem === "string" ? pem : bytesToBinary(pem);
+}
+
 function loadP12CertificateMaterial(
-  p12Buffer: Buffer,
+  p12Bytes: Uint8Array,
   passphrase: string,
 ): CertificateMaterial {
-  const asn1 = forge.asn1.fromDer(p12Buffer.toString("binary"));
+  const asn1 = forge.asn1.fromDer(bytesToBinary(p12Bytes));
   const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, passphrase);
   const oids = forge.pki.oids;
   const shroudedKeyBagOid = oids.pkcs8ShroudedKeyBag as string;
